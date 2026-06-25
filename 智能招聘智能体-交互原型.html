@@ -1,0 +1,1635 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智能招聘智能体 · 交互原型</title>
+<style>
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: #e8e8e8;
+  display: flex; justify-content: center; align-items: center;
+  min-height: 100vh; padding: 20px;
+}
+:root {
+  --wechat-green: #07C160;
+  --wechat-green-light: #e8f8ef;
+  --bg-chat: #f5f5f5;
+  --bg-sidebar: #2e2e2e;
+  --text-primary: #191919;
+  --text-secondary: #666;
+  --text-muted: #999;
+  --border: #e0e0e0;
+  --white: #fff;
+  --bubble-self: #95ec69;
+  --bubble-other: #fff;
+  --shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+.prototype-container {
+  display: flex;
+  width: 1100px; height: 750px;
+  border-radius: 12px; overflow: hidden;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.15);
+  background: var(--white);
+}
+
+/* Sidebar */
+.sidebar {
+  width: 280px; background: var(--bg-sidebar); color: #ccc;
+  display: flex; flex-direction: column;
+  flex-shrink: 0;
+}
+.sidebar-header {
+  padding: 20px 16px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.sidebar-header h2 {
+  color: #fff; font-size: 15px; font-weight: 600;
+  display: flex; align-items: center; gap: 8px;
+}
+.sidebar-header h2 .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--wechat-green);
+  display: inline-block;
+}
+.sidebar-header .subtitle {
+  font-size: 12px; color: #888; margin-top: 4px;
+}
+.sidebar-scenarios {
+  flex: 1; overflow-y: auto; padding: 8px 0;
+}
+.scenario-group-title {
+  font-size: 11px; color: #666; text-transform: uppercase;
+  padding: 12px 16px 6px; letter-spacing: 0.5px;
+}
+.scenario-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px; cursor: pointer;
+  transition: all 0.15s; border-left: 3px solid transparent;
+  font-size: 13px; color: #aaa;
+}
+.scenario-item:hover { background: rgba(255,255,255,0.05); color: #ddd; }
+.scenario-item.active {
+  background: rgba(7,193,96,0.12); color: var(--wechat-green);
+  border-left-color: var(--wechat-green); font-weight: 500;
+}
+.scenario-item .icon {
+  width: 28px; height: 28px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+}
+.scenario-item .icon.jd { background: rgba(7,193,96,0.2); }
+.scenario-item .icon.resume { background: rgba(64,158,255,0.2); }
+.scenario-item .icon.screening { background: rgba(230,162,60,0.2); }
+.scenario-item .icon.progress { background: rgba(144,147,153,0.2); }
+.scenario-item .icon.reset { background: rgba(245,108,108,0.2); }
+
+.sidebar-footer {
+  padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.08);
+  font-size: 11px; color: #666;
+}
+.sidebar-footer .tag {
+  display: inline-block; background: rgba(7,193,96,0.15); color: var(--wechat-green);
+  padding: 2px 8px; border-radius: 10px; font-size: 10px; margin-right: 4px;
+}
+
+/* Chat Area */
+.chat-area {
+  flex: 1; display: flex; flex-direction: column;
+  background: var(--bg-chat);
+}
+.chat-header {
+  padding: 12px 20px; background: var(--white);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+.chat-header .group-avatar {
+  width: 36px; height: 36px; border-radius: 6px;
+  background: linear-gradient(135deg, #07C160, #06ae56);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 16px; font-weight: bold;
+}
+.chat-header .group-info { flex: 1; }
+.chat-header .group-name { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.chat-header .group-meta { font-size: 11px; color: var(--text-muted); }
+
+/* Messages */
+.chat-messages {
+  flex: 1; overflow-y: auto; padding: 16px 20px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.chat-messages::-webkit-scrollbar { width: 5px; }
+.chat-messages::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
+
+/* System Message */
+.msg-system {
+  text-align: center; font-size: 12px; color: var(--text-muted);
+  padding: 4px 0; margin: 4px 0;
+}
+
+/* Chat Bubble */
+.msg-row {
+  display: flex; gap: 10px; max-width: 75%;
+  animation: fadeInUp 0.3s ease-out;
+}
+.msg-row.self { align-self: flex-end; flex-direction: row-reverse; }
+.msg-row.other { align-self: flex-start; }
+.msg-avatar {
+  width: 34px; height: 34px; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; color: #fff; flex-shrink: 0;
+  font-weight: 700;
+}
+.msg-avatar.bot { background: var(--wechat-green); }
+.msg-avatar.hr { background: #4a90d9; }
+.msg-avatar.system-av { background: #999; font-size: 12px; }
+.msg-bubble {
+  background: var(--bubble-other); padding: 10px 14px;
+  border-radius: 6px; font-size: 13px; line-height: 1.6;
+  color: var(--text-primary); word-break: break-word;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  position: relative;
+}
+.msg-row.self .msg-bubble {
+  background: var(--bubble-self);
+}
+.msg-sender {
+  font-size: 11px; color: var(--text-muted); margin-bottom: 4px;
+}
+
+/* Message Cards (from bot) */
+.msg-card {
+  background: var(--white); border-radius: 8px;
+  padding: 16px; border: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.msg-card h3 {
+  font-size: 14px; margin-bottom: 8px;
+  display: flex; align-items: center; gap: 6px;
+}
+.msg-card .card-section { margin-bottom: 10px; }
+.msg-card .card-section:last-child { margin-bottom: 0; }
+.msg-card .section-title {
+  font-size: 12px; font-weight: 600; color: var(--text-secondary);
+  margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.3px;
+}
+.msg-card .skill-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.msg-card .skill-tag {
+  background: #e8f5e9; color: #2e7d32;
+  padding: 2px 10px; border-radius: 12px;
+  font-size: 11px; font-weight: 500;
+}
+.msg-card ul { padding-left: 16px; font-size: 13px; }
+.msg-card ul li { margin-bottom: 3px; }
+.msg-card .hint {
+  font-size: 11px; color: var(--text-muted); margin-top: 8px;
+  padding-top: 8px; border-top: 1px dashed #e0e0e0;
+}
+.msg-card table { width: 100%; font-size: 12px; border-collapse: collapse; }
+.msg-card table td, .msg-card table th {
+  padding: 4px 8px; border-bottom: 1px solid #f0f0f0; text-align: left;
+}
+.msg-card table th { color: var(--text-secondary); font-weight: 500; }
+.msg-card .score-bar {
+  height: 6px; border-radius: 3px; background: #e0e0e0;
+  margin-top: 2px; position: relative;
+}
+.msg-card .score-bar-fill {
+  height: 100%; border-radius: 3px;
+  background: linear-gradient(90deg, var(--wechat-green), #4caf50);
+}
+.msg-card .highlight { color: var(--wechat-green); font-weight: 600; }
+.msg-card .highlight-del { color: #e53935; text-decoration: line-through; background: #ffebee; padding: 1px 4px; border-radius: 2px; }
+.msg-card .highlight-add { color: #2e7d32; background: #e8f5e9; padding: 1px 4px; border-radius: 2px; font-weight: 600; }
+
+/* Analysis Card */
+.analysis-block {
+  background: #f8fdf9; border: 1px solid #d4edda; border-radius: 6px; padding: 12px;
+  margin-bottom: 10px;
+}
+.analysis-block .analysis-item {
+  display: flex; gap: 8px; align-items: flex-start; margin-bottom: 6px;
+  font-size: 12px; line-height: 1.5;
+}
+.analysis-block .analysis-item:last-child { margin-bottom: 0; }
+.analysis-block .analysis-icon {
+  font-size: 14px; flex-shrink: 0; width: 20px; text-align: center;
+}
+.analysis-block .analysis-label { color: var(--text-secondary); font-weight: 500; white-space: nowrap; }
+.analysis-block .analysis-value { color: var(--text-primary); }
+.analysis-keywords { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.analysis-keyword {
+  background: #e8f5e9; color: #2e7d32; padding: 1px 8px;
+  border-radius: 10px; font-size: 10px; font-weight: 500;
+}
+
+/* Position Picker */
+.position-picker {
+  display: flex; flex-direction: column; gap: 6px; margin-top: 8px;
+}
+.position-picker .pos-option {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border: 1px solid var(--border);
+  border-radius: 8px; cursor: pointer; transition: all 0.15s;
+}
+.position-picker .pos-option:hover { border-color: var(--wechat-green); background: #f9fdf9; }
+.position-picker .pos-option .pos-radio {
+  width: 18px; height: 18px; border-radius: 50%; border: 2px solid #ccc;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.position-picker .pos-option .pos-radio.selected {
+  border-color: var(--wechat-green); background: var(--wechat-green);
+}
+.position-picker .pos-option .pos-radio.selected::after {
+  content: ''; width: 6px; height: 6px; border-radius: 50%; background: #fff;
+}
+.position-picker .pos-info { flex: 1; }
+.position-picker .pos-name { font-size: 13px; font-weight: 500; }
+.position-picker .pos-meta { font-size: 11px; color: var(--text-muted); }
+.position-picker .pos-count {
+  font-size: 11px; color: var(--wechat-green); font-weight: 500;
+  background: #e8f8ef; padding: 2px 8px; border-radius: 10px;
+}
+
+/* Modification Summary Card */
+.mod-summary { 
+  background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px;
+  padding: 12px; margin-bottom: 12px; font-size: 12px;
+}
+.mod-summary .mod-title { font-weight: 600; margin-bottom: 6px; color: #f57f17; }
+.mod-summary .mod-item { margin-bottom: 3px; padding-left: 12px; }
+.msg-card .rank-badge {
+  display: inline-block; width: 22px; height: 22px; border-radius: 50%;
+  text-align: center; line-height: 22px; font-size: 12px; font-weight: 700;
+  margin-right: 6px; color: #fff;
+}
+.msg-card .rank-badge.r1 { background: #ff6b35; }
+.msg-card .rank-badge.r2 { background: #4a90d9; }
+.msg-card .rank-badge.r3 { background: #07C160; }
+
+/* File Message */
+.msg-file {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--white); padding: 10px 14px;
+  border-radius: 6px; border: 1px solid var(--border);
+  cursor: default;
+}
+.msg-file .file-icon {
+  width: 36px; height: 36px; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.msg-file .file-icon.pdf { background: #fdecea; color: #d32f2f; }
+.msg-file .file-icon.word { background: #e3f2fd; color: #1976d2; }
+.msg-file .file-info { flex: 1; min-width: 0; }
+.msg-file .file-name { font-size: 12px; font-weight: 500; color: var(--text-primary); }
+.msg-file .file-size { font-size: 11px; color: var(--text-muted); }
+
+/* Typing Indicator */
+.typing-indicator {
+  display: flex; gap: 4px; padding: 8px 14px;
+}
+.typing-indicator span {
+  width: 7px; height: 7px; border-radius: 50%; background: #999;
+  animation: typingBounce 1.2s infinite ease-in-out;
+}
+.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+/* Input Bar */
+.chat-input-area {
+  background: var(--white); border-top: 1px solid var(--border);
+  padding: 10px 16px;
+}
+.chat-input-toolbar {
+  display: flex; gap: 12px; margin-bottom: 8px;
+}
+.chat-input-toolbar button {
+  background: none; border: none; font-size: 20px;
+  cursor: pointer; padding: 4px; border-radius: 4px;
+  transition: background 0.15s; color: #666;
+}
+.chat-input-toolbar button:hover { background: #f0f0f0; }
+.chat-input-row {
+  display: flex; gap: 10px; align-items: flex-end;
+}
+.chat-input-row textarea {
+  flex: 1; border: 1px solid var(--border); border-radius: 6px;
+  padding: 8px 12px; font-size: 13px; resize: none;
+  font-family: inherit; line-height: 1.5; outline: none;
+  max-height: 80px; min-height: 36px;
+  transition: border-color 0.15s;
+}
+.chat-input-row textarea:focus { border-color: var(--wechat-green); }
+.btn-send {
+  background: var(--wechat-green); color: #fff; border: none;
+  padding: 8px 20px; border-radius: 6px; font-size: 13px;
+  font-weight: 500; cursor: pointer; transition: all 0.15s;
+  white-space: nowrap;
+}
+.btn-send:hover { background: #06ae56; }
+.btn-send:disabled { background: #ccc; cursor: not-allowed; }
+.btn-send.thinking { animation: pulse 1s infinite; }
+
+/* Quick Actions */
+.quick-actions {
+  display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px;
+}
+.quick-actions button {
+  background: #f5f5f5; border: 1px solid #e0e0e0;
+  padding: 4px 12px; border-radius: 14px; font-size: 11px;
+  cursor: pointer; transition: all 0.15s; color: #666;
+  white-space: nowrap;
+}
+.quick-actions button:hover {
+  background: var(--wechat-green-light); border-color: var(--wechat-green);
+  color: var(--wechat-green);
+}
+.quick-actions button.primary-action {
+  background: var(--wechat-green); color: #fff; border-color: var(--wechat-green);
+  font-weight: 500;
+}
+
+/* Toast */
+.toast {
+  position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+  background: #333; color: #fff; padding: 10px 24px;
+  border-radius: 20px; font-size: 13px; z-index: 999;
+  animation: toastIn 0.3s ease-out;
+  pointer-events: none;
+}
+
+/* Walkthrough Overlay */
+.walkthrough-overlay {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5); z-index: 10;
+  display: flex; align-items: center; justify-content: center;
+}
+.walkthrough-card {
+  background: var(--white); border-radius: 12px;
+  padding: 24px; width: 360px; text-align: center;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+  animation: fadeInUp 0.4s ease-out;
+}
+.walkthrough-card h3 { font-size: 17px; margin-bottom: 8px; }
+.walkthrough-card p { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.6; }
+.walkthrough-card .step-indicator {
+  display: flex; gap: 6px; justify-content: center; margin-bottom: 16px;
+}
+.walkthrough-card .step-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: #ddd;
+}
+.walkthrough-card .step-dot.done { background: var(--wechat-green); }
+.walkthrough-card .step-dot.current { background: var(--wechat-green); box-shadow: 0 0 0 3px rgba(7,193,96,0.3); }
+.walkthrough-card .btn-walkthrough {
+  background: var(--wechat-green); color: #fff; border: none;
+  padding: 10px 28px; border-radius: 20px; font-size: 14px;
+  cursor: pointer; font-weight: 500;
+}
+.walkthrough-card .btn-skip {
+  background: none; border: none; color: var(--text-muted);
+  font-size: 12px; cursor: pointer; margin-top: 10px;
+}
+
+/* File upload modal */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.4); z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-content {
+  background: var(--white); border-radius: 12px; padding: 24px;
+  width: 400px; box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+}
+.modal-content h3 { font-size: 16px; margin-bottom: 12px; }
+.modal-files { display: flex; flex-direction: column; gap: 8px; }
+.modal-file-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  border: 1px solid var(--border); border-radius: 8px; cursor: pointer;
+  transition: all 0.15s;
+}
+.modal-file-item:hover { border-color: var(--wechat-green); background: #f9fdf9; }
+.modal-file-item .fi-icon {
+  width: 32px; height: 32px; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+.modal-file-item .fi-icon.pdf-bg { background: #fdecea; color: #d32f2f; }
+.modal-file-item .fi-icon.word-bg { background: #e3f2fd; color: #1976d2; }
+.modal-file-item .fi-icon.img-bg { background: #fff3e0; color: #f57c00; }
+.modal-file-item .fi-info { flex: 1; }
+.modal-file-item .fi-name { font-size: 13px; font-weight: 500; }
+.modal-file-item .fi-meta { font-size: 11px; color: var(--text-muted); }
+
+/* Animations */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes typingBounce {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+</style>
+</head>
+<body>
+
+<div class="prototype-container" id="prototype">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h2><span class="dot"></span>智能招聘智能体</h2>
+      <div class="subtitle">MVP 交互原型 · v1.2</div>
+    </div>
+    <div class="sidebar-scenarios">
+      <div class="scenario-group-title">🧪 体验场景</div>
+      <div class="scenario-item active" data-scenario="jd" onclick="switchScenario('jd')">
+        <div class="icon jd">📋</div>
+        <div>场景一：生成岗位JD</div>
+      </div>
+      <div class="scenario-item" data-scenario="resume" onclick="switchScenario('resume')">
+        <div class="icon resume">📄</div>
+        <div>场景二：简历解析</div>
+      </div>
+      <div class="scenario-item" data-scenario="screening" onclick="switchScenario('screening')">
+        <div class="icon screening">🌟</div>
+        <div>场景三：AI筛选评分</div>
+      </div>
+      <div class="scenario-item" data-scenario="progress" onclick="switchScenario('progress')">
+        <div class="icon progress">📊</div>
+        <div>场景四：进度查询</div>
+      </div>
+      <div class="scenario-group-title" style="margin-top:8px">🔄 操作</div>
+      <div class="scenario-item" onclick="resetAll()">
+        <div class="icon reset">↺</div>
+        <div>重置原型</div>
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <span class="tag">MVP</span>
+      <span class="tag">桌面端</span>
+      <span class="tag">企微@机器人</span>
+    </div>
+  </div>
+
+  <!-- Chat Area -->
+  <div class="chat-area" id="chatArea">
+    <div class="chat-header">
+      <div class="group-avatar">HR</div>
+      <div class="group-info">
+        <div class="group-name">HR招聘协作群</div>
+        <div class="group-meta">3人群 · 含招聘助手</div>
+      </div>
+    </div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-input-area">
+      <div class="chat-input-toolbar">
+        <button title="表情" onclick="showToast('功能开发中')">😀</button>
+        <button title="文件" onclick="showFilePicker()">📎</button>
+        <button title="截图" onclick="showToast('功能开发中')">✂️</button>
+        <button title="@提及" onclick="insertMention()">@</button>
+      </div>
+      <div class="chat-input-row">
+        <textarea id="chatInput" placeholder="输入消息，或 @招聘助手 + 你的需求..." rows="1" onkeydown="handleKeydown(event)"></textarea>
+        <button class="btn-send" id="btnSend" onclick="sendMessage()">发送</button>
+      </div>
+      <div class="quick-actions" id="quickActions"></div>
+    </div>
+  </div>
+</div>
+
+<!-- File Picker Modal -->
+<div class="modal-overlay" id="fileModal" style="display:none" onclick="if(event.target===this) closeFilePicker()">
+  <div class="modal-content">
+    <h3>📎 选择简历文件发送</h3>
+    <p style="font-size:12px;color:#999;margin-bottom:12px">模拟文件上传 · 点击即可发送</p>
+    <div class="modal-files" id="fileList"></div>
+    <button onclick="closeFilePicker()" style="margin-top:12px;width:100%;padding:8px;background:#f5f5f5;border:1px solid #e0e0e0;border-radius:6px;cursor:pointer;font-size:13px">取消</button>
+  </div>
+</div>
+
+<!-- Walkthrough overlay -->
+<div class="walkthrough-overlay" id="walkthrough" style="display:none">
+  <div class="walkthrough-card">
+    <div style="font-size:48px;margin-bottom:8px" id="walkEmoji">👋</div>
+    <h3 id="walkTitle">欢迎体验</h3>
+    <p id="walkDesc">这是一个交互原型，模拟HR在企微群中通过 @招聘助手 完成招聘流程。</p>
+    <div class="step-indicator">
+      <div class="step-dot done"></div>
+      <div class="step-dot current"></div>
+      <div class="step-dot"></div>
+      <div class="step-dot"></div>
+    </div>
+    <button class="btn-walkthrough" id="walkBtn" onclick="nextWalkStep()">开始体验</button>
+    <br>
+    <button class="btn-skip" onclick="skipWalkthrough()">跳过引导，自由体验</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   STATE MANAGEMENT
+   ============================================================ */
+const state = {
+  currentScenario: 'jd',
+  messages: [],
+  jobConfirmed: false,
+  resumeCount: 0,
+  parsedResumes: [],
+  screeningDone: false,
+  walkStep: 0,
+  walkActive: false,
+  // Multi-job support
+  activeJobs: [],       // { id, title, dept, location, status, resumeCount }
+  currentJobId: null,
+  nextJobId: 1,
+  pendingResume: null,  // resume data waiting for position assignment
+};
+
+/* ============================================================
+   DEMO DATA
+   ============================================================ */
+const demoResumes = [
+  { name: '李明', file: '李明-嵌入式软件工程师简历.pdf', size: '245KB', type: 'pdf',
+    parse: { name:'李明', age:30, degree:'硕士', school:'上海交通大学', major:'电子科学与技术', years:5, city:'上海',
+      experience: [{role:'芯片验证工程师',company:'ABC半导体',period:'2023-至今 (2年)'},{role:'验证工程师',company:'XYZ科技',period:'2021-2023 (2年)'}],
+      skills: ['UVM','SystemVerilog','Python','覆盖率分析','SoC验证'] }
+  },
+  { name: '王芳', file: '王芳-简历.docx', size: '180KB', type: 'word',
+    parse: { name:'王芳', age:28, degree:'硕士', school:'浙江大学', major:'微电子', years:4, city:'杭州',
+      experience: [{role:'DFT工程师',company:'DEF半导体',period:'2022-至今 (2年)'},{role:'芯片验证工程师',company:'GHI电子',period:'2020-2022 (2年)'}],
+      skills: ['SystemVerilog','UVM','Perl','覆盖率分析','回归测试'] }
+  },
+  { name: '张伟', file: '张伟-集成电路工程师简历.pdf', size: '320KB', type: 'pdf',
+    parse: { name:'张伟', age:32, degree:'本科', school:'电子科技大学', major:'电子信息工程', years:7, city:'成都',
+      experience: [{role:'高级验证工程师',company:'JKL微电子',period:'2024-至今 (0.5年)'},{role:'验证工程师',company:'MNO半导体',period:'2023-2024 (1.5年)'},{role:'芯片测试工程师',company:'PQR科技',period:'2019-2023 (4年)'}],
+      skills: ['SystemVerilog','UVM','C++','脚本自动化','功耗分析'] }
+  },
+  { name: '赵雪', file: '赵雪-数字IC验证.pdf', size: '198KB', type: 'pdf',
+    parse: { name:'赵雪', age:26, degree:'硕士', school:'复旦大学', major:'集成电路工程', years:2, city:'上海',
+      experience: [{role:'验证工程师',company:'STU半导体',period:'2024-至今 (1年)'}],
+      skills: ['SystemVerilog','UVM','Python','Tcl'] }
+  },
+  { name: '陈涛', file: '陈涛-芯片设计验证.docx', size: '156KB', type: 'word',
+    parse: { name:'陈涛', age:35, degree:'博士', school:'清华大学', major:'电子工程', years:8, city:'北京',
+      experience: [{role:'验证架构师',company:'VWX芯片',period:'2020-至今 (4年)'},{role:'高级验证工程师',company:'YZA半导体',period:'2016-2020 (4年)'}],
+      skills: ['SystemVerilog','UVM','验证方法学','团队管理','Python','覆盖率驱动'] }
+  },
+];
+
+// Demo active jobs (for position picker)
+const demoJobs = [
+  { id: 'job_1', title: '嵌入式软件工程师', dept: '芯片验证组', location: '上海', resumeCount: 0 },
+  { id: 'job_2', title: '数字IC设计工程师', dept: '芯片设计组', location: '深圳', resumeCount: 0 },
+  { id: 'job_3', title: '系统架构师', dept: '系统组', location: '北京', resumeCount: 0 },
+];
+
+const screeningReport = {
+  total: 5, scored: 5, recommend: 3,
+  top3: [
+    { rank:1, name:'陈涛', total:94, skills:19, exp:19, edu:20, proj:18, stability:18, highlight:'8年验证经验，博士学历，有团队管理能力' },
+    { rank:2, name:'李明', total:92, skills:19, exp:18, edu:18, proj:19, stability:18, highlight:'5年SoC验证经验，主导过3个UVM验证项目' },
+    { rank:3, name:'王芳', total:85, skills:18, exp:17, edu:16, proj:17, stability:17, highlight:'有丰富的覆盖率分析和回归测试经验' },
+  ]
+};
+
+/* ============================================================
+   MESSAGE RENDERING
+   ============================================================ */
+function addSystemMsg(text) {
+  state.messages.push({ type:'system', text });
+  renderMessages();
+}
+
+function addUserMsg(text) {
+  state.messages.push({ type:'user', text });
+  renderMessages();
+  scrollToBottom();
+}
+
+function addUserFile(file) {
+  state.messages.push({ type:'user_file', file });
+  renderMessages();
+  scrollToBottom();
+}
+
+function addBotCard(cardHTML) {
+  state.messages.push({ type:'bot_card', html: cardHTML });
+  renderMessages();
+  scrollToBottom();
+}
+
+function addBotMsg(text) {
+  state.messages.push({ type:'bot_text', text });
+  renderMessages();
+  scrollToBottom();
+}
+
+function renderMessages() {
+  const container = document.getElementById('chatMessages');
+  let html = '';
+  let lastTime = '';
+  state.messages.forEach((msg, idx) => {
+    // Time divider (simplified)
+    
+    if (msg.type === 'system') {
+      html += `<div class="msg-system">${msg.text}</div>`;
+    } else if (msg.type === 'user') {
+      html += `
+        <div class="msg-row self">
+          <div class="msg-avatar hr">HR</div>
+          <div>
+            <div class="msg-sender">杨经理 (HR)</div>
+            <div class="msg-bubble">${msg.text}</div>
+          </div>
+        </div>`;
+    } else if (msg.type === 'user_file') {
+      const fi = msg.file;
+      const iconClass = fi.type === 'pdf' ? 'pdf' : fi.type === 'word' ? 'word' : 'img';
+      const iconEmoji = fi.type === 'pdf' ? '📕' : fi.type === 'word' ? '📘' : '🖼️';
+      html += `
+        <div class="msg-row self">
+          <div class="msg-avatar hr">HR</div>
+          <div>
+            <div class="msg-sender">杨经理 (HR)</div>
+            <div class="msg-file">
+              <div class="file-icon ${iconClass}">${iconEmoji}</div>
+              <div class="file-info">
+                <div class="file-name">${fi.name}</div>
+                <div class="file-size">${fi.size}</div>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    } else if (msg.type === 'bot_card') {
+      html += `
+        <div class="msg-row other">
+          <div class="msg-avatar bot">招</div>
+          <div>
+            <div class="msg-sender">招聘助手</div>
+            <div class="msg-card">${msg.html}</div>
+          </div>
+        </div>`;
+    } else if (msg.type === 'bot_text') {
+      html += `
+        <div class="msg-row other">
+          <div class="msg-avatar bot">招</div>
+          <div>
+            <div class="msg-sender">招聘助手</div>
+            <div class="msg-bubble">${msg.text}</div>
+          </div>
+        </div>`;
+    }
+  });
+  container.innerHTML = html;
+  scrollToBottom();
+}
+
+function scrollToBottom() {
+  const container = document.getElementById('chatMessages');
+  setTimeout(() => { container.scrollTop = container.scrollHeight; }, 50);
+}
+
+function showTyping(callback, delay=1500) {
+  const container = document.getElementById('chatMessages');
+  const typingHTML = `
+    <div class="msg-row other" id="typingIndicator">
+      <div class="msg-avatar bot">招</div>
+      <div>
+        <div class="msg-sender">招聘助手</div>
+        <div class="msg-bubble">
+          <div class="typing-indicator">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  container.insertAdjacentHTML('beforeend', typingHTML);
+  scrollToBottom();
+  disableInput(true);
+  setTimeout(() => {
+    const ti = document.getElementById('typingIndicator');
+    if (ti) ti.remove();
+    disableInput(false);
+    if (callback) callback();
+  }, delay);
+}
+
+function disableInput(disabled) {
+  document.getElementById('chatInput').disabled = disabled;
+  const btn = document.getElementById('btnSend');
+  btn.disabled = disabled;
+  if (disabled) btn.classList.add('thinking');
+  else btn.classList.remove('thinking');
+}
+
+function updateQuickActions(actions) {
+  const qa = document.getElementById('quickActions');
+  qa.innerHTML = actions.map(a => 
+    `<button class="${a.primary ? 'primary-action' : ''}" onclick="${a.onclick}">${a.label}</button>`
+  ).join('');
+}
+
+/* ============================================================
+   CORE FLOWS
+   ============================================================ */
+
+// ---- Scenario 1: JD Generation ----
+function flowJDGeneration(userInput) {
+  const input = userInput || document.getElementById('chatInput').value.trim();
+  if (!input) return;
+  
+  addUserMsg(input);
+  document.getElementById('chatInput').value = '';
+  
+  showTyping(() => {
+    // Check if enough info
+    if (input.length < 10) {
+      addBotMsg(`🤔 信息有点少，能多告诉我一些吗？比如：
+• 岗位名称是什么？
+• 需要哪些核心技能？
+• 是哪个团队在招人？`);
+      return;
+    }
+    
+    // ---- Step 1: AI Task Analysis ----
+    const analysisCard = `
+      <h3>🔍 任务分析</h3>
+      <div class="analysis-block">
+        <div class="analysis-item">
+          <span class="analysis-icon">🎯</span>
+          <span class="analysis-label">识别意图：</span>
+          <span class="analysis-value">生成岗位JD</span>
+        </div>
+        <div class="analysis-item">
+          <span class="analysis-icon">💼</span>
+          <span class="analysis-label">推断岗位：</span>
+          <span class="analysis-value"><strong>嵌入式软件工程师</strong></span>
+        </div>
+        <div class="analysis-item">
+          <span class="analysis-icon">🏢</span>
+          <span class="analysis-label">推断部门：</span>
+          <span class="analysis-value">芯片验证组</span>
+        </div>
+        <div class="analysis-item">
+          <span class="analysis-icon">📍</span>
+          <span class="analysis-label">工作地点：</span>
+          <span class="analysis-value">上海（可从描述推断，请确认）</span>
+        </div>
+        <div class="analysis-item">
+          <span class="analysis-icon">🧠</span>
+          <span class="analysis-label">提取技能：</span>
+          <span class="analysis-value">
+            <div class="analysis-keywords">
+              <span class="analysis-keyword">SystemVerilog</span>
+              <span class="analysis-keyword">UVM</span>
+              <span class="analysis-keyword">芯片验证</span>
+              <span class="analysis-keyword">覆盖率分析</span>
+              <span class="analysis-keyword">回归测试</span>
+              <span class="analysis-keyword">Python</span>
+            </div>
+          </span>
+        </div>
+        <div class="analysis-item">
+          <span class="analysis-icon">📊</span>
+          <span class="analysis-label">经验推断：</span>
+          <span class="analysis-value">3年以上芯片验证经验（中高级岗位）</span>
+        </div>
+      </div>
+      <div class="hint">⏳ 正在根据分析结果生成标准化JD...</div>`;
+    
+    addBotCard(analysisCard);
+    
+    // ---- Step 2: Generate JD (after another delay) ----
+    setTimeout(() => {
+      showTyping(() => {
+        // Register job
+        const jobId = 'job_' + (state.nextJobId++);
+        const jobTitle = '嵌入式软件工程师';
+        state.activeJobs.push({
+          id: jobId, title: jobTitle, dept: '芯片验证组',
+          location: '上海', resumeCount: 0
+        });
+        state.currentJobId = jobId;
+        state.jobConfirmed = false;
+        
+        const jdCard = `
+          <h3>📋 岗位JD <span style="font-size:11px;color:var(--wechat-green);font-weight:normal">· 基于分析生成</span></h3>
+          <div class="card-section">
+            <div class="section-title">基本信息</div>
+            <p><strong>岗位名称</strong>：${jobTitle}</p>
+            <p><strong>所属部门</strong>：芯片验证组</p>
+            <p><strong>工作地点</strong>：上海</p>
+            <p><strong>汇报对象</strong>：芯片验证组组长</p>
+            <p><strong>招聘人数</strong>：2人</p>
+          </div>
+          <div class="card-section">
+            <div class="section-title">岗位职责</div>
+            <ul>
+              <li>负责芯片验证测试用例的开发与执行</li>
+              <li>参与UVM验证环境的搭建和维护</li>
+              <li>编写验证计划和覆盖率分析报告</li>
+              <li>与设计团队协作，跟踪和关闭设计缺陷</li>
+            </ul>
+          </div>
+          <div class="card-section">
+            <div class="section-title">任职要求 — 硬性条件</div>
+            <ul>
+              <li>本科及以上学历，电子/计算机/微电子相关专业</li>
+              <li>3年以上芯片验证经验</li>
+              <li>熟练掌握 SystemVerilog 和 UVM 验证方法学</li>
+              <li>具备覆盖率分析和回归测试经验</li>
+            </ul>
+          </div>
+          <div class="card-section">
+            <div class="section-title">加分项</div>
+            <ul>
+              <li>有SoC级验证经验</li>
+              <li>熟悉 Python/Perl 脚本开发</li>
+              <li>了解 DFT 或低功耗设计验证</li>
+            </ul>
+          </div>
+          <div class="hint">
+            💡 用自然语言告诉我修改意见，比如：<strong>"工作地点改成深圳"</strong> 或 <strong>"加上FPGA验证经验要求"</strong><br>
+            💡 回复 <strong>"确认"</strong> 保存JD并开始收集简历
+          </div>`;
+        
+        addBotCard(jdCard);
+        updateQuickActions([
+          { label:'✅ 确认JD', onclick:'confirmJD()', primary:true },
+          { label:'✏️ 自由修改', onclick:'promptModifyJD()' },
+        ]);
+      }, 1200);
+    }, 2000);
+  }, 1200);
+}
+
+function confirmJD() {
+  addUserMsg('确认');
+  state.jobConfirmed = true;
+  updateQuickActions([]);
+  
+  const job = state.activeJobs.find(j => j.id === state.currentJobId);
+  const jobTitle = job ? job.title : '当前岗位';
+  
+  showTyping(() => {
+    addBotMsg(`✅ JD已保存！岗位【${jobTitle}】进入简历收集阶段。
+
+📤 现在可以直接发送候选人的简历给我：
+• 拖拽或点击📎发送 PDF/Word 文件
+• 或直接粘贴简历文本
+
+📌 如果你有多个活跃岗位，简历解析后我会询问你关联到哪个岗位。
+收集满3份后可以让我帮你筛选评分。`);
+    updateQuickActions([
+      { label:'📎 发送简历文件', onclick:'showFilePicker()', primary:true },
+    ]);
+  }, 1200);
+}
+
+function promptModifyJD() {
+  const input = document.getElementById('chatInput');
+  input.value = '@招聘助手 修改：';
+  input.focus();
+  // Place cursor at end
+  input.setSelectionRange(input.value.length, input.value.length);
+}
+
+function modifyJD(userModText) {
+  const modText = userModText || '工作地点改为深圳，招聘人数改为1人';
+  
+  // Parse the modification to determine what changed
+  // (in production this would be LLM-parsed; here we simulate)
+  let locationChange = null, countChange = null, skillAdd = null, skillRemove = null;
+  let otherChanges = [];
+  
+  if (/深圳/i.test(modText)) { locationChange = '深圳'; otherChanges.push('工作地点：上海 → 深圳'); }
+  if (/北京/i.test(modText)) { locationChange = '北京'; otherChanges.push('工作地点：上海 → 北京'); }
+  if (/1人|一个|一人|调整为1/i.test(modText)) { countChange = '1人'; otherChanges.push('招聘人数：2人 → 1人'); }
+  if (/3人|三个|三人/i.test(modText)) { countChange = '3人'; otherChanges.push('招聘人数：2人 → 3人'); }
+  if (/fpga|FPGA/i.test(modText)) { skillAdd = 'FPGA验证经验'; otherChanges.push('加分项新增：FPGA验证经验'); }
+  if (/硕士/i.test(modText) && !/博士/i.test(modText)) { otherChanges.push('学历要求更新：本科及以上 → 硕士及以上'); }
+  if (/博士/i.test(modText)) { otherChanges.push('学历要求更新：本科及以上 → 博士优先'); }
+  if (/去掉.*python|不要.*python|移除.*python/i.test(modText)) { skillRemove = 'Python'; otherChanges.push('加分项移除：Python/Perl脚本开发'); }
+  
+  if (otherChanges.length === 0) {
+    // Generic modification - show understanding but note no specific fields matched
+    otherChanges.push('根据描述微调JD措辞和表述');
+  }
+  
+  showTyping(() => {
+    // Show modification understanding summary
+    const modSummaryHTML = `
+      <div class="mod-summary">
+        <div class="mod-title">🧠 已理解您的修改意见</div>
+        ${otherChanges.map(c => `<div class="mod-item">• ${c}</div>`).join('')}
+      </div>`;
+    
+    // Build updated JD with highlighted changes
+    const currentLocation = locationChange || '上海';
+    const currentCount = countChange || '2人';
+    const locationDisplay = locationChange 
+      ? `<span class="highlight-del">上海</span> → <span class="highlight-add">${locationChange}</span>` 
+      : '上海';
+    const countDisplay = countChange 
+      ? `<span class="highlight-del">2人</span> → <span class="highlight-add">${countChange}</span>` 
+      : '2人';
+    
+    let bonusItems = [
+      '有SoC级验证经验',
+      '熟悉 Python/Perl 脚本开发',
+      '了解 DFT 或低功耗设计验证',
+    ];
+    if (skillAdd) bonusItems.push(skillAdd);
+    if (skillRemove) bonusItems = bonusItems.filter(i => !i.includes(skillRemove));
+    
+    // Apply education change
+    let eduReq = '本科及以上学历，电子/计算机/微电子相关专业';
+    if (/硕士/.test(modText) && !/博士/.test(modText)) eduReq = '<span class="highlight-del">本科</span><span class="highlight-add">硕士</span>及以上学历，电子/计算机/微电子相关专业';
+    if (/博士/.test(modText)) eduReq = '博士优先，电子/计算机/微电子相关专业 <span class="highlight-add">← 已更新</span>';
+    
+    const jdCard = `
+      <h3>📋 岗位JD <span style="font-size:11px;color:#999;font-weight:normal">（已更新）</span></h3>
+      ${modSummaryHTML}
+      <div class="card-section">
+        <div class="section-title">基本信息</div>
+        <p><strong>岗位名称</strong>：嵌入式软件工程师</p>
+        <p><strong>工作地点</strong>：${locationDisplay}</p>
+        <p><strong>汇报对象</strong>：芯片验证组组长</p>
+        <p><strong>招聘人数</strong>：${countDisplay}</p>
+      </div>
+      <div class="card-section">
+        <div class="section-title">岗位职责</div>
+        <ul>
+          <li>负责芯片验证测试用例的开发与执行</li>
+          <li>参与UVM验证环境的搭建和维护</li>
+          <li>编写验证计划和覆盖率分析报告</li>
+          <li>与设计团队协作，跟踪和关闭设计缺陷</li>
+        </ul>
+      </div>
+      <div class="card-section">
+        <div class="section-title">任职要求 — 硬性条件</div>
+        <ul>
+          <li>${eduReq}</li>
+          <li>3年以上芯片验证经验</li>
+          <li>熟练掌握 SystemVerilog 和 UVM 验证方法学</li>
+          <li>具备覆盖率分析和回归测试经验</li>
+        </ul>
+      </div>
+      <div class="card-section">
+        <div class="section-title">加分项</div>
+        <ul>
+          ${bonusItems.map(item => `<li>${item}</li>`).join('')}
+        </ul>
+      </div>
+      <div class="hint">
+        💡 还可以继续用自然语言修改，比如：<strong>"经验要求改成5年"</strong><br>
+        💡 回复 <strong>"确认"</strong> 保存JD
+      </div>`;
+    
+    addBotCard(jdCard);
+    // Update the job in activeJobs
+    const job = state.activeJobs.find(j => j.id === state.currentJobId);
+    if (job) {
+      if (locationChange) job.location = locationChange;
+    }
+    updateQuickActions([
+      { label:'✅ 确认JD', onclick:'confirmJD()', primary:true },
+      { label:'✏️ 继续修改', onclick:'promptModifyJD()' },
+    ]);
+  }, 1800);
+}
+
+// ---- Scenario 2: Resume Upload & Parse ----
+function showFilePicker() {
+  const modal = document.getElementById('fileModal');
+  const list = document.getElementById('fileList');
+  
+  const available = demoResumes.filter(r => 
+    !state.parsedResumes.find(pr => pr.name === r.name)
+  );
+  
+  list.innerHTML = available.map(r => {
+    const iconBg = r.type === 'pdf' ? 'pdf-bg' : 'word-bg';
+    const iconEmoji = r.type === 'pdf' ? '📕' : '📘';
+    return `
+      <div class="modal-file-item" onclick="uploadResume('${r.name}')">
+        <div class="fi-icon ${iconBg}">${iconEmoji}</div>
+        <div class="fi-info">
+          <div class="fi-name">${r.file}</div>
+          <div class="fi-meta">${r.size} · ${r.type === 'pdf' ? 'PDF文档' : 'Word文档'}</div>
+        </div>
+      </div>`;
+  }).join('');
+  
+  if (available.length === 0) {
+    list.innerHTML = '<p style="text-align:center;color:#999;padding:20px">所有演示简历已发送完毕</p>';
+  }
+  
+  modal.style.display = 'flex';
+}
+
+function closeFilePicker() {
+  document.getElementById('fileModal').style.display = 'none';
+}
+
+function uploadResume(name) {
+  closeFilePicker();
+  const resume = demoResumes.find(r => r.name === name);
+  if (!resume) return;
+  
+  addUserFile({ name: resume.file, size: resume.size, type: resume.type });
+  
+  showTyping(() => {
+    const p = resume.parse;
+    
+    // Store pending resume data
+    state.pendingResume = { name: p.name, data: p, file: resume };
+    
+    // Show parsed result + ask which position to associate
+    const skillsHTML = p.skills.map(s => `<span class="skill-tag">${s}</span>`).join(' ');
+    const expHTML = p.experience.map((e, i) => 
+      `<li>${e.role} | ${e.company} | ${e.period}</li>`
+    ).join('');
+    
+    // Build position picker
+    let positionOptionsHTML = '';
+    if (state.activeJobs.length === 0) {
+      positionOptionsHTML = `<p style="font-size:12px;color:#999;padding:8px">暂无活跃岗位，请先生成JD。</p>`;
+    } else {
+      positionOptionsHTML = state.activeJobs.map(j => `
+        <div class="pos-option" onclick="assignResumeToJob('${j.id}', '${j.title}')">
+          <div class="pos-radio"></div>
+          <div class="pos-info">
+            <div class="pos-name">${j.title}</div>
+            <div class="pos-meta">${j.dept} · ${j.location}</div>
+          </div>
+          <div class="pos-count">${j.resumeCount}份简历</div>
+        </div>
+      `).join('');
+      
+      // Also add "new position" option
+      positionOptionsHTML += `
+        <div class="pos-option" onclick="assignResumeToNewJob()" style="border-style:dashed">
+          <div class="pos-radio"></div>
+          <div class="pos-info">
+            <div class="pos-name">➕ 创建新岗位并关联</div>
+            <div class="pos-meta">该简历可能匹配尚未创建的岗位</div>
+          </div>
+        </div>`;
+    }
+    
+    const card = `
+      <h3>📄 简历解析完成</h3>
+      <div class="card-section">
+        <table>
+          <tr><td><strong>姓名</strong></td><td>${p.name}</td><td><strong>年龄</strong></td><td>${p.age}</td></tr>
+          <tr><td><strong>最高学历</strong></td><td>${p.degree}</td><td><strong>毕业院校</strong></td><td>${p.school}</td></tr>
+          <tr><td><strong>专业</strong></td><td>${p.major}</td><td><strong>工作年限</strong></td><td>${p.years}年</td></tr>
+          <tr><td><strong>现居</strong></td><td>${p.city}</td><td></td><td></td></tr>
+        </table>
+      </div>
+      <div class="card-section">
+        <div class="section-title">工作经历</div>
+        <ul>${expHTML}</ul>
+      </div>
+      <div class="card-section">
+        <div class="section-title">技能标签</div>
+        <div class="skill-tags">${skillsHTML}</div>
+      </div>
+      <div class="card-section" style="background:#f8fdf9;border:1px solid #d4edda;border-radius:8px;padding:12px;margin-top:8px">
+        <div class="section-title" style="color:var(--wechat-green)">🔗 请选择关联岗位</div>
+        <p style="font-size:12px;color:var(--text-secondary);margin-bottom:8px">该简历应该关联到哪个招聘岗位？</p>
+        <div class="position-picker">
+          ${positionOptionsHTML}
+        </div>
+      </div>`;
+    
+    addBotCard(card);
+    updateQuickActions([]);
+  }, 1800);
+}
+
+function assignResumeToJob(jobId, jobTitle) {
+  if (!state.pendingResume) return;
+  
+  const p = state.pendingResume.data;
+  
+  // Add to parsed resumes
+  state.parsedResumes.push({ name: p.name, data: p, jobId: jobId, jobTitle: jobTitle });
+  state.resumeCount = state.parsedResumes.length;
+  
+  // Update job resume count
+  const job = state.activeJobs.find(j => j.id === jobId);
+  if (job) job.resumeCount = (job.resumeCount || 0) + 1;
+  
+  state.pendingResume = null;
+  
+  addUserMsg(`关联到【${jobTitle}】`);
+  
+  showTyping(() => {
+    addBotMsg(`✅ 已将 <strong>${p.name}</strong> 的简历关联到岗位【${jobTitle}】
+
+📊 该岗位当前已收集 <strong>${job.resumeCount}</strong> 份简历。`);
+    
+    if (state.resumeCount >= 3 && !state.screeningDone) {
+      updateQuickActions([
+        { label:'📎 继续发简历', onclick:'showFilePicker()' },
+        { label:'🌟 开始筛选评分', onclick:'triggerScreening()', primary:true },
+      ]);
+    } else {
+      updateQuickActions([
+        { label:'📎 继续发简历', onclick:'showFilePicker()', primary:true },
+      ]);
+    }
+  }, 800);
+}
+
+function assignResumeToNewJob() {
+  if (!state.pendingResume) return;
+  const p = state.pendingResume.data;
+  state.pendingResume = null;
+  
+  addUserMsg('创建新岗位');
+  
+  showTyping(() => {
+    addBotMsg(`💡 好的，请告诉我新岗位的信息。比如：
+
+<strong>@招聘助手 帮我招一个${p.skills.slice(0,3).join('/')}相关的岗位</strong>
+
+我会根据候选人的技能方向帮你生成匹配的JD。`);
+    updateQuickActions([]);
+  }, 800);
+}
+
+// ---- Scenario 3: Screening & Scoring ----
+function triggerScreening() {
+  if (state.resumeCount < 3) {
+    addUserMsg('@招聘助手 开始筛选');
+    showTyping(() => {
+      addBotMsg(`📭 当前仅有 ${state.resumeCount} 份简历，建议至少积累3份后再筛选。要预览已解析的简历吗？`);
+    }, 800);
+    return;
+  }
+  
+  addUserMsg('@招聘助手 开始筛选');
+  
+  showTyping(() => {
+    state.screeningDone = true;
+    const report = screeningReport;
+    
+    const top3HTML = report.top3.map(t => `
+      <div style="margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #f0f0f0">
+        <div style="display:flex;align-items:center;margin-bottom:6px">
+          <span class="rank-badge r${t.rank}">${t.rank}</span>
+          <strong>${t.name}</strong>
+          <span style="margin-left:auto;font-size:18px;font-weight:700;color:var(--wechat-green)">${t.total}分</span>
+        </div>
+        <table>
+          <tr>
+            <th>技能匹配</th><td>${t.skills}/20</td>
+            <th>经验匹配</th><td>${t.exp}/20</td>
+          </tr>
+          <tr>
+            <th>学历匹配</th><td>${t.edu}/20</td>
+            <th>项目匹配</th><td>${t.proj}/20</td>
+          </tr>
+          <tr>
+            <th>稳定性</th><td>${t.stability}/20</td>
+          </tr>
+        </table>
+        <div style="margin-top:4px;font-size:11px;color:#666">💬 ${t.highlight}</div>
+      </div>
+    `).join('');
+    
+    const card = `
+      <h3>🌟 筛选报告</h3>
+      <div class="card-section">
+        <p><strong>岗位</strong>：嵌入式软件工程师</p>
+        <p><strong>简历总数</strong>：${report.total}份 &nbsp;|&nbsp; <strong>已完成评分</strong>：${report.scored}份 &nbsp;|&nbsp; <strong>推荐面试</strong>：<span class="highlight">${report.recommend}份</span></p>
+      </div>
+      <div class="card-section">
+        <div class="section-title">Top 3 候选人</div>
+        ${top3HTML}
+      </div>
+      <div class="hint">
+        💡 回复 <strong>"查看 [姓名] 详情"</strong> 看完整评分明细<br>
+        💡 回复 <strong>"导出报告"</strong> 生成筛选报告文件
+      </div>`;
+    
+    addBotCard(card);
+    state.jobConfirmed = true;
+    updateQuickActions([
+      { label:'👤 查看陈涛详情', onclick:'viewDetail("陈涛")' },
+      { label:'👤 查看李明详情', onclick:'viewDetail("李明")' },
+      { label:'👤 查看王芳详情', onclick:'viewDetail("王芳")' },
+    ]);
+  }, 2500);
+}
+
+function viewDetail(name) {
+  addUserMsg(`查看 ${name} 的详细评分`);
+  
+  showTyping(() => {
+    const detailData = {
+      '陈涛': { total:94, skills:19, exp:19, edu:20, proj:18, stability:18, 
+        match: 'SystemVerilog ✓, UVM ✓, Python ✓, SoC验证 ✓', 
+        gap: '无显著差距', 
+        summary: '综合素质最优，博士学历 + 8年经验 + 管理能力，建议优先安排面试。' },
+      '李明': { total:92, skills:19, exp:18, edu:18, proj:19, stability:18,
+        match: 'SystemVerilog ✓, UVM ✓, Python ✓, SoC验证 ✓',
+        gap: '学历要求硕士，李明为硕士 ✓；经验丰富度略低于陈涛',
+        summary: '5年SoC验证经验，项目匹配度极高，是强有力的第二候选人。' },
+      '王芳': { total:85, skills:18, exp:17, edu:16, proj:17, stability:17,
+        match: 'SystemVerilog ✓, UVM ✓, 覆盖率分析 ✓',
+        gap: 'SoC验证经验不足，Perl而非Python；硕士学历但非顶级院校',
+        summary: '基础扎实，覆盖率分析和回归测试经验丰富，适合作为备选面试。' },
+    };
+    const d = detailData[name];
+    
+    const card = `
+      <h3>🔍 ${name} — 评分明细</h3>
+      <div class="card-section">
+        <table>
+          <tr><th>维度</th><th>得分</th><th>满分</th><th></th></tr>
+          <tr><td>技能匹配度</td><td>${d.skills}</td><td>20</td><td><div class="score-bar"><div class="score-bar-fill" style="width:${d.skills*5}%"></div></div></td></tr>
+          <tr><td>经验匹配度</td><td>${d.exp}</td><td>20</td><td><div class="score-bar"><div class="score-bar-fill" style="width:${d.exp*5}%"></div></div></td></tr>
+          <tr><td>学历匹配度</td><td>${d.edu}</td><td>20</td><td><div class="score-bar"><div class="score-bar-fill" style="width:${d.edu*5}%"></div></div></td></tr>
+          <tr><td>项目匹配度</td><td>${d.proj}</td><td>20</td><td><div class="score-bar"><div class="score-bar-fill" style="width:${d.proj*5}%"></div></div></td></tr>
+          <tr><td>稳定性</td><td>${d.stability}</td><td>20</td><td><div class="score-bar"><div class="score-bar-fill" style="width:${d.stability*5}%"></div></div></td></tr>
+          <tr style="font-weight:700;background:#f9fdf9"><td>总分</td><td colspan="3" style="color:var(--wechat-green);font-size:16px">${d.total} / 100</td></tr>
+        </table>
+      </div>
+      <div class="card-section">
+        <div class="section-title">匹配关键词</div>
+        <p style="font-size:12px">${d.match}</p>
+      </div>
+      <div class="card-section">
+        <div class="section-title">差距分析</div>
+        <p style="font-size:12px">${d.gap}</p>
+      </div>
+      <div style="background:#e8f8ef;padding:10px;border-radius:6px;font-size:13px">
+        <strong>AI建议</strong>：${d.summary}
+      </div>`;
+    
+    addBotCard(card);
+    updateQuickActions([]);
+  }, 1500);
+}
+
+// ---- Scenario 4: Progress Query ----
+function queryProgress() {
+  addUserMsg('@招聘助手 看下进度');
+  
+  showTyping(() => {
+    const card = `
+      <h3>📊 招聘进度</h3>
+      <div class="card-section">
+        <table>
+          <tr><td><strong>岗位</strong></td><td>嵌入式软件工程师</td></tr>
+          <tr><td><strong>状态</strong></td><td><span style="color:var(--wechat-green);font-weight:600">● 筛选中</span></td></tr>
+          <tr><td><strong>JD</strong></td><td>✅ 已生成并确认</td></tr>
+          <tr><td><strong>简历收集</strong></td><td>${state.resumeCount} 份</td></tr>
+          <tr><td><strong>已解析</strong></td><td>${state.resumeCount} 份</td></tr>
+          <tr><td><strong>已评分</strong></td><td>${state.screeningDone ? state.resumeCount : 0} 份</td></tr>
+          <tr><td><strong>推荐面试</strong></td><td>${state.screeningDone ? '3 份' : '—'}</td></tr>
+          <tr><td><strong>最近操作</strong></td><td>${state.screeningDone ? 'AI筛选评分完成' : '简历收集中'}</td></tr>
+        </table>
+      </div>
+      <div class="hint">
+        ${state.screeningDone 
+          ? '✅ 筛选已完成。回复"查看 [姓名] 详情"看评分明细' 
+          : '📤 继续发送简历，满3份后可触发筛选'}
+      </div>`;
+    
+    addBotCard(card);
+    updateQuickActions(state.screeningDone ? [
+      { label:'🌟 查看筛选报告', onclick:'triggerScreening()' },
+    ] : [
+      { label:'📎 发送简历', onclick:'showFilePicker()', primary:true },
+    ]);
+  }, 1200);
+}
+
+/* ============================================================
+   INPUT HANDLING
+   ============================================================ */
+function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  
+  // Intent recognition (simplified)
+  const lower = text.toLowerCase();
+  
+  if (lower.includes('@招聘助手') || lower.includes('@招聘机器人') || lower.includes('@recruit')) {
+    const content = text.replace(/@招聘助手|@招聘机器人|@recruit/gi, '').trim();
+    
+    if (/招|jd|岗位|招聘|hire/i.test(content)) {
+      flowJDGeneration(text);
+    } else if (/筛选|打分|评分|看看这批/i.test(content)) {
+      triggerScreening();
+    } else if (/进度|情况|怎么样|多少份/i.test(content)) {
+      queryProgress();
+    } else if (/查看.*详情|.*评分.*$/i.test(content)) {
+      const nameMatch = content.match(/查看\s*(.+?)\s*(的)?(详情|评分)/);
+      if (nameMatch) viewDetail(nameMatch[1].trim());
+      else addUserMsg(text);
+    } else if (/确认|ok|就这样|没问题/i.test(content)) {
+      confirmJD();
+    } else if (/修改|改成|加上|去掉/i.test(content)) {
+      modifyJD(content);
+    } else {
+      // Fallback
+      addUserMsg(text);
+      showTyping(() => {
+        addBotMsg(`🤔 抱歉，我没理解您的意思。我可以帮您：
+• <strong>生成JD</strong> — 输入"帮我招一个[岗位]"
+• <strong>提交简历</strong> — 直接发送简历文件或粘贴文本
+• <strong>筛选简历</strong> — 输入"开始筛选"
+• <strong>查询进度</strong> — 输入"进度"
+💡 或者直接描述您想做什么，我尽力理解。`);
+      }, 1000);
+    }
+  } else {
+    // Regular chat message
+    addUserMsg(text);
+  }
+}
+
+function insertMention() {
+  const input = document.getElementById('chatInput');
+  input.value = '@招聘助手 ' + input.value;
+  input.focus();
+}
+
+function handleKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+/* ============================================================
+   SCENARIO SWITCHING
+   ============================================================ */
+function switchScenario(scenario) {
+  state.currentScenario = scenario;
+  
+  // Update sidebar
+  document.querySelectorAll('.scenario-item[data-scenario]').forEach(el => {
+    el.classList.toggle('active', el.dataset.scenario === scenario);
+  });
+  
+  // Reset state
+  resetAll(false);
+  
+  // Load scenario
+  switch(scenario) {
+    case 'jd': loadJDScenario(); break;
+    case 'resume': loadResumeScenario(); break;
+    case 'screening': loadScreeningScenario(); break;
+    case 'progress': loadProgressScenario(); break;
+  }
+}
+
+function loadJDScenario() {
+  state.messages = [];
+  state.activeJobs = [];
+  state.currentJobId = null;
+  state.jobConfirmed = false;
+  renderMessages();
+  addSystemMsg('— 场景一：生成岗位JD —');
+  addSystemMsg('试试发送：@招聘助手 帮我招一个嵌入式软件工程师，负责芯片验证，需要熟悉UVM和SystemVerilog');
+  updateQuickActions([
+    { label:'@招聘助手 帮我招人...', onclick:'setInputAndSend("@招聘助手 帮我招一个嵌入式软件工程师，负责芯片验证和驱动的开发，需要熟悉UVM和SystemVerilog")', primary:true },
+  ]);
+  document.getElementById('chatInput').placeholder = '@招聘助手 输入招聘需求...';
+  document.getElementById('chatInput').focus();
+}
+
+function loadResumeScenario() {
+  state.jobConfirmed = true;
+  state.messages = [];
+  // Pre-register 2 demo jobs for the position picker
+  state.activeJobs = [
+    { id: 'job_1', title: '嵌入式软件工程师', dept: '芯片验证组', location: '上海', resumeCount: 0 },
+    { id: 'job_2', title: '数字IC设计工程师', dept: '芯片设计组', location: '深圳', resumeCount: 0 },
+  ];
+  state.currentJobId = 'job_1';
+  state.nextJobId = 3;
+  renderMessages();
+  addSystemMsg('— 场景二：简历提交与解析 —');
+  addBotMsg('✅ JD已保存！当前有 <strong>2个</strong> 活跃岗位。\n\n📤 发送简历后，系统会询问你关联到哪个岗位。点击 📎 试试看。');
+  updateQuickActions([
+    { label:'📎 发送简历文件', onclick:'showFilePicker()', primary:true },
+  ]);
+}
+
+function loadScreeningScenario() {
+  state.jobConfirmed = true;
+  state.screeningDone = false;
+  state.parsedResumes = [];
+  state.activeJobs = [
+    { id: 'job_1', title: '嵌入式软件工程师', dept: '芯片验证组', location: '上海', resumeCount: 5 },
+  ];
+  state.currentJobId = 'job_1';
+  state.nextJobId = 2;
+  
+  // Pre-load 5 demo resumes
+  state.messages = [];
+  renderMessages();
+  addSystemMsg('— 场景三：AI筛选评分 —');
+  addSystemMsg('已预载5份简历，直接触发筛选查看评分效果');
+  
+  // Simulate pre-loaded resumes
+  state.parsedResumes = demoResumes.map(r => ({ name: r.parse.name, data: r.parse, jobId: 'job_1', jobTitle: '嵌入式软件工程师' }));
+  state.resumeCount = 5;
+  
+  const names = demoResumes.map(r => r.parse.name).join('、');
+  addBotMsg(`📊 当前岗位【嵌入式软件工程师】已收集 <strong>5份</strong>简历（${names}），可以开始筛选了。`);
+  
+  updateQuickActions([
+    { label:'🌟 开始筛选评分', onclick:'triggerScreening()', primary:true },
+  ]);
+}
+
+function loadProgressScenario() {
+  state.jobConfirmed = true;
+  state.screeningDone = true;
+  state.parsedResumes = demoResumes.map(r => ({ name: r.parse.name, data: r.parse, jobId: 'job_1', jobTitle: '嵌入式软件工程师' }));
+  state.resumeCount = 5;
+  state.activeJobs = [
+    { id: 'job_1', title: '嵌入式软件工程师', dept: '芯片验证组', location: '上海', resumeCount: 5 },
+  ];
+  state.currentJobId = 'job_1';
+  state.nextJobId = 2;
+  
+  state.messages = [];
+  renderMessages();
+  addSystemMsg('— 场景四：进度查询 —');
+  
+  addBotMsg('📊 筛选已完成。试试查询进度和查看候选人详情。');
+  
+  updateQuickActions([
+    { label:'📊 查询进度', onclick:'queryProgress()', primary:true },
+    { label:'👤 查看陈涛详情', onclick:'viewDetail("陈涛")' },
+  ]);
+}
+
+function setInputAndSend(text) {
+  document.getElementById('chatInput').value = text;
+  sendMessage();
+}
+
+/* ============================================================
+   FILE UPLOAD VIA INPUT
+   ============================================================ */
+// Handle real file upload (for demo: parse text content)
+document.getElementById('chatInput').addEventListener('paste', function(e) {
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  
+  for (let item of items) {
+    if (item.kind === 'file') {
+      e.preventDefault();
+      const file = item.getAsFile();
+      addUserFile({ name: file.name, size: formatSize(file.size), type: file.name.endsWith('.pdf') ? 'pdf' : 'word' });
+      showTyping(() => {
+        addBotMsg('⚠️ 原型演示模式：简历解析功能需要后端支持。在真实产品中，这里会自动提取简历结构化信息。');
+      }, 1200);
+      return;
+    }
+  }
+});
+
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + 'B';
+  if (bytes < 1048576) return (bytes/1024).toFixed(0) + 'KB';
+  return (bytes/1048576).toFixed(1) + 'MB';
+}
+
+/* ============================================================
+   WALKTHROUGH
+   ============================================================ */
+function startWalkthrough() {
+  state.walkActive = true;
+  state.walkStep = 0;
+  showWalkStep();
+}
+
+function showWalkStep() {
+  const overlay = document.getElementById('walkthrough');
+  const steps = [
+    { emoji: '👋', title: '欢迎体验智能招聘智能体', desc: '这是一个交互原型，模拟 HR 在企微群中通过 <strong>@招聘助手</strong> 完成招聘流程。整个流程无需切换任何工具，全部在企微内完成。', btn: '开始体验' },
+    { emoji: '📋', title: '场景一：生成JD', desc: 'HR在群中@招聘助手，用自然语言描述招聘需求。AI在 <strong>60秒内</strong> 自动生成标准化岗位JD，支持修改迭代。', btn: '下一步' },
+    { emoji: '📄', title: '场景二：简历解析', desc: 'HR将候选人简历拖入企微群。AI自动提取 <strong>姓名、学历、工作经历、技能标签</strong>，并<strong>询问关联到哪个岗位</strong>（支持多岗位选择）。', btn: '下一步' },
+    { emoji: '🌟', title: '场景三：AI筛选评分', desc: '满3份简历后说"开始筛选"。AI从 <strong>5个维度</strong> 自动评分，推送Top候选人报告，支持查看详细评分明细。', btn: '开始自由体验' },
+  ];
+  
+  const step = steps[state.walkStep] || steps[3];
+  document.getElementById('walkEmoji').textContent = step.emoji;
+  document.getElementById('walkTitle').textContent = step.title;
+  document.getElementById('walkDesc').innerHTML = step.desc;
+  document.getElementById('walkBtn').textContent = step.btn;
+  
+  // Update step dots
+  const dots = overlay.querySelectorAll('.step-dot');
+  dots.forEach((dot, i) => {
+    dot.classList.remove('done', 'current');
+    if (i < state.walkStep) dot.classList.add('done');
+    else if (i === state.walkStep) dot.classList.add('current');
+  });
+  
+  overlay.style.display = 'flex';
+}
+
+function nextWalkStep() {
+  const scenarios = ['jd', 'resume', 'screening', 'progress'];
+  state.walkStep++;
+  
+  if (state.walkStep >= 4) {
+    skipWalkthrough();
+    return;
+  }
+  
+  // Load the corresponding scenario
+  switchScenario(scenarios[state.walkStep - 1]);
+  showWalkStep();
+}
+
+function skipWalkthrough() {
+  state.walkActive = false;
+  document.getElementById('walkthrough').style.display = 'none';
+  switchScenario('jd');
+}
+
+/* ============================================================
+   RESET
+   ============================================================ */
+function resetAll(showToastFlag = true) {
+  state.jobConfirmed = false;
+  state.resumeCount = 0;
+  state.parsedResumes = [];
+  state.screeningDone = false;
+  state.messages = [];
+  state.activeJobs = [];
+  state.currentJobId = null;
+  state.pendingResume = null;
+  state.nextJobId = 1;
+  renderMessages();
+  updateQuickActions([]);
+  document.getElementById('chatInput').value = '';
+  
+  if (showToastFlag) {
+    showToast('原型已重置');
+    switchScenario('jd');
+  }
+}
+
+/* ============================================================
+   UTILS
+   ============================================================ */
+function showToast(msg) {
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2000);
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+document.addEventListener('DOMContentLoaded', () => {
+  startWalkthrough();
+});
+
+// Keyboard shortcut: Ctrl+Enter to send
+document.addEventListener('keydown', function(e) {
+  if (e.ctrlKey && e.key === 'Enter') {
+    sendMessage();
+  }
+});
+</script>
+
+</body>
+</html>
